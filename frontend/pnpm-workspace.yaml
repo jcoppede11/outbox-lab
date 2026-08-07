@@ -1,0 +1,23 @@
+packages:
+
+# Seguridad en la cadena de dependencias
+minimumReleaseAge: 4320
+dangerouslyAllowAllBuilds: false
+strictDepBuilds: true
+enablePrePostScripts: false
+
+# Resolución de versiones
+resolutionMode: "time-based"
+
+# Integridad y consistencia
+verifyStoreIntegrity: true
+preferFrozenLockfile: true
+lockfile: true
+
+# Workspace
+sharedWorkspaceLockfile: true
+allowBuilds:
+  esbuild: true
+  "@parcel/watcher": true
+  lmdb: true
+  msgpackr-extract: true
