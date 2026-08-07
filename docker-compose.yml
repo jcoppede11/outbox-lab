@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: outbox-lab-postgres
+    environment:
+      POSTGRES_USER: outbox
+      POSTGRES_PASSWORD: outbox
+      POSTGRES_DB: outbox_lab
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U outbox -d outbox_lab"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Servicio one-shot: aplica las migraciones y termina.
+  # Corre en `docker compose up` (antes del backend) y también a mano:
+  #   docker compose run --rm migrate
+  migrate:
+    image: migrate/migrate:v4.18.1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    volumes:
+      - ./backend/migrations:/migrations:ro
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://outbox:outbox@postgres:5432/outbox_lab?sslmode=disable"
+      - "up"
+
+  backend:
+    build:
+      context: ./backend
+    container_name: outbox-lab-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgres://outbox:outbox@postgres:5432/outbox_lab?sslmode=disable
+      HTTP_ADDR: ":8080"
+      RELAY_INTERVAL: 1s
+      RELAY_BATCH: "50"
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
