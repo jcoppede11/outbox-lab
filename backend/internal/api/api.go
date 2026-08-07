@@ -1,5 +1,5 @@
 // Package api exposes the HTTP surface of the demo: the transactional writer
-// (POST /api/orders), a read endpoint that shows all three actors at once
+// (POST /api/payments), a read endpoint that shows all three actors at once
 // (GET /api/state) and the chaos switch for the broker (POST /api/chaos).
 package api
 
@@ -28,21 +28,21 @@ func New(s *store.Store, b *broker.Broker, log *slog.Logger) *Server {
 // Routes returns the HTTP handler with all routes and CORS applied.
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /api/orders", s.createOrder)
+	mux.HandleFunc("POST /api/payments", s.createPayment)
 	mux.HandleFunc("GET /api/state", s.getState)
 	mux.HandleFunc("POST /api/chaos", s.setChaos)
 	return cors(mux)
 }
 
-type createOrderRequest struct {
+type createPaymentRequest struct {
 	Customer string  `json:"customer"`
 	Amount   float64 `json:"amount"`
 	Currency string  `json:"currency"`
 }
 
-// createOrder registers a payment and its outbox event atomically.
-func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
-	var req createOrderRequest
+// createPayment registers a payment and its outbox event atomically.
+func (s *Server) createPayment(w http.ResponseWriter, r *http.Request) {
+	var req createPaymentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
@@ -55,19 +55,19 @@ func (s *Server) createOrder(w http.ResponseWriter, r *http.Request) {
 		req.Currency = "USD"
 	}
 
-	order, err := s.store.CreateOrder(r.Context(), req.Customer, req.Amount, req.Currency)
+	payment, err := s.store.CreatePayment(r.Context(), req.Customer, req.Amount, req.Currency)
 	if err != nil {
-		s.log.Error("create order failed", "err", err)
-		writeError(w, http.StatusInternalServerError, "could not create order")
+		s.log.Error("create payment failed", "err", err)
+		writeError(w, http.StatusInternalServerError, "could not create payment")
 		return
 	}
-	writeJSON(w, http.StatusCreated, order)
+	writeJSON(w, http.StatusCreated, payment)
 }
 
 type stateResponse struct {
-	Orders []domain.Order     `json:"orders"`
-	Outbox []domain.OutboxRow `json:"outbox"`
-	Broker brokerState        `json:"broker"`
+	Payments []domain.Payment   `json:"payments"`
+	Outbox   []domain.OutboxRow `json:"outbox"`
+	Broker   brokerState        `json:"broker"`
 }
 
 type brokerState struct {
@@ -76,12 +76,12 @@ type brokerState struct {
 	Received      []domain.Event `json:"received"`
 }
 
-// getState returns the three visible actors: orders, outbox and broker.
+// getState returns the three visible actors: payments, outbox and broker.
 func (s *Server) getState(w http.ResponseWriter, r *http.Request) {
-	orders, err := s.store.Orders(r.Context())
+	payments, err := s.store.Payments(r.Context())
 	if err != nil {
-		s.log.Error("list orders failed", "err", err)
-		writeError(w, http.StatusInternalServerError, "could not read orders")
+		s.log.Error("list payments failed", "err", err)
+		writeError(w, http.StatusInternalServerError, "could not read payments")
 		return
 	}
 	outbox, err := s.store.Outbox(r.Context())
@@ -92,8 +92,8 @@ func (s *Server) getState(w http.ResponseWriter, r *http.Request) {
 	}
 	received := s.broker.Received()
 	writeJSON(w, http.StatusOK, stateResponse{
-		Orders: orders,
-		Outbox: outbox,
+		Payments: payments,
+		Outbox:   outbox,
 		Broker: brokerState{
 			Down:          s.broker.IsDown(),
 			ReceivedCount: len(received),

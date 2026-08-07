@@ -1,6 +1,6 @@
 // Package store holds all database access for the outbox demo. It is the only
 // place that talks to PostgreSQL, and it is where the two invariants of the
-// pattern live: (1) an order and its event are written in one transaction, and
+// pattern live: (1) a payment and its event are written in one transaction, and
 // (2) the relay drains pending events transactionally.
 package store
 
@@ -21,48 +21,48 @@ type Store struct {
 // New returns a Store backed by the given pool.
 func New(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
 
-// CreateOrder inserts the order and its outbox event inside a single
+// CreatePayment inserts the payment and its outbox event inside a single
 // transaction. Either both rows commit or neither does — this atomicity is the
 // whole point of the outbox pattern: we never charge without recording the
 // event, nor emit an event without a real charge.
-func (s *Store) CreateOrder(ctx context.Context, customer string, amount float64, currency string) (domain.Order, error) {
+func (s *Store) CreatePayment(ctx context.Context, customer string, amount float64, currency string) (domain.Payment, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return domain.Order{}, err
+		return domain.Payment{}, err
 	}
 	defer tx.Rollback(ctx) // no-op once the tx is committed
 
-	var o domain.Order
+	var p domain.Payment
 	err = tx.QueryRow(ctx,
-		`INSERT INTO orders (customer, amount, currency, status)
+		`INSERT INTO payments (customer, amount, currency, status)
 		 VALUES ($1, $2, $3, 'authorized')
 		 RETURNING id, customer, amount::float8, currency, status, created_at`,
 		customer, amount, currency,
-	).Scan(&o.ID, &o.Customer, &o.Amount, &o.Currency, &o.Status, &o.CreatedAt)
+	).Scan(&p.ID, &p.Customer, &p.Amount, &p.Currency, &p.Status, &p.CreatedAt)
 	if err != nil {
-		return domain.Order{}, err
+		return domain.Payment{}, err
 	}
 
 	payload, err := json.Marshal(domain.Event{
-		Type:     domain.EventPaymentAuthorized,
-		OrderID:  o.ID,
-		Amount:   o.Amount,
-		Currency: o.Currency,
+		Type:      domain.EventPaymentAuthorized,
+		PaymentID: p.ID,
+		Amount:    p.Amount,
+		Currency:  p.Currency,
 	})
 	if err != nil {
-		return domain.Order{}, err
+		return domain.Payment{}, err
 	}
 
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO outbox (payload) VALUES ($1)`, payload,
 	); err != nil {
-		return domain.Order{}, err
+		return domain.Payment{}, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return domain.Order{}, err
+		return domain.Payment{}, err
 	}
-	return o, nil
+	return p, nil
 }
 
 // PublishFunc publishes one event payload to the broker. It returns an error
@@ -132,25 +132,25 @@ func (s *Store) DrainPending(ctx context.Context, publish PublishFunc, limit int
 	return sent, nil
 }
 
-// Orders returns all orders, newest first.
-func (s *Store) Orders(ctx context.Context) ([]domain.Order, error) {
+// Payments returns all payments, newest first.
+func (s *Store) Payments(ctx context.Context) ([]domain.Payment, error) {
 	rows, err := s.pool.Query(ctx,
 		`SELECT id, customer, amount::float8, currency, status, created_at
-		 FROM orders ORDER BY created_at DESC, id DESC`)
+		 FROM payments ORDER BY created_at DESC, id DESC`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	orders := make([]domain.Order, 0)
+	payments := make([]domain.Payment, 0)
 	for rows.Next() {
-		var o domain.Order
-		if err := rows.Scan(&o.ID, &o.Customer, &o.Amount, &o.Currency, &o.Status, &o.CreatedAt); err != nil {
+		var p domain.Payment
+		if err := rows.Scan(&p.ID, &p.Customer, &p.Amount, &p.Currency, &p.Status, &p.CreatedAt); err != nil {
 			return nil, err
 		}
-		orders = append(orders, o)
+		payments = append(payments, p)
 	}
-	return orders, rows.Err()
+	return payments, rows.Err()
 }
 
 // Outbox returns all outbox rows, newest first.

@@ -6,7 +6,7 @@ Aceptado
 
 ## Contexto
 
-PayOutbox demuestra el patrón Transactional Outbox para pagos. La base de datos debe almacenar el estado de negocio (órdenes/pagos) y los eventos pendientes de publicar hacia el broker, garantizando atomicidad entre ambos.
+PayOutbox demuestra el patrón Transactional Outbox para pagos. La base de datos debe almacenar el estado de negocio (pagos) y los eventos pendientes de publicar hacia el broker, garantizando atomicidad entre ambos.
 
 ## Decisión
 
@@ -14,13 +14,13 @@ PayOutbox demuestra el patrón Transactional Outbox para pagos. La base de datos
 
 Se declara `CREATE EXTENSION IF NOT EXISTS pgcrypto` para habilitar `gen_random_uuid()`. Aunque está disponible en el core de PostgreSQL desde la versión 13, la extensión se declara explícitamente por compatibilidad y claridad de dependencias.
 
-### Tabla `orders`
+### Tabla `payments`
 
-Almacena el estado de negocio de cada orden/pago: cliente, monto, moneda y estado (`created`, `authorized`, `failed`).
+Almacena el estado de negocio de cada pago: cliente, monto, moneda y estado (`created`, `authorized`, `failed`).
 
 ### Tabla `outbox`
 
-Almacena eventos pendientes de publicar hacia el broker. Se escribe en la misma transacción que `orders` para garantizar atomicidad: o se persisten ambos o ninguno.
+Almacena eventos pendientes de publicar hacia el broker. Se escribe en la misma transacción que `payments` para garantizar atomicidad: o se persisten ambos o ninguno.
 
 Columnas relevantes:
 
@@ -38,10 +38,10 @@ SELECT ... WHERE status = 'pending' ORDER BY id FOR UPDATE SKIP LOCKED LIMIT N
 
 ### Migración down
 
-La migración de rollback elimina las tablas `outbox` y `orders` pero no dropea la extensión `pgcrypto`, ya que puede ser utilizada por otros objetos del esquema.
+La migración de rollback elimina las tablas `outbox` y `payments` pero no dropea la extensión `pgcrypto`, ya que puede ser utilizada por otros objetos del esquema.
 
 ## Consecuencias
 
 - El relay puede hacer polling eficiente de eventos pendientes sin escanear filas ya enviadas.
-- La atomicidad entre orden y evento queda garantizada a nivel de transacción SQL.
+- La atomicidad entre pago y evento queda garantizada a nivel de transacción SQL.
 - Los consumidores del broker deben ser idempotentes (entrega at-least-once).

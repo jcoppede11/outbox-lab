@@ -3,7 +3,7 @@
 Laboratorio para demostrar el patrón **Transactional Outbox** en pagos: cómo
 registrar un pago y publicar su evento sin caer en el problema del *dual write*.
 
-Tres actores visibles: la tabla `orders` (estado de negocio), la tabla `outbox`
+Tres actores visibles: la tabla `payments` (estado de negocio), la tabla `outbox`
 (eventos `pending`/`sent`/`failed`) y un **broker falso in-process** (lo que
 facturación/notificaciones realmente reciben). Un **relay** en segundo plano
 drena la outbox hacia el broker. El **modo caos** permite tirar el broker y ver
@@ -20,12 +20,12 @@ que ningún evento se pierde: quedan pendientes y se drenan solos al reactivarlo
 backend/
   cmd/server/          main: wiring de pool, broker, relay y HTTP server
   internal/
-    domain/            tipos compartidos (Order, Event, OutboxRow)
+    domain/            tipos compartidos (Payment, Event, OutboxRow)
     store/             acceso a datos: escritor transaccional + drenado
     broker/            broker falso in-process con flag de caída
     relay/             goroutine con time.Ticker que publica pendientes
     api/               handlers HTTP + CORS
-  migrations/          migraciones golang-migrate (orders + outbox)
+  migrations/          migraciones golang-migrate (payments + outbox)
   Dockerfile           build multi-stage (distroless)
 docs/adr/              decisiones de arquitectura
 docker-compose.yml     postgres + migrate (one-shot) + backend
@@ -65,28 +65,28 @@ docker compose down -v
 
 Base URL: `http://localhost:8080`
 
-| Método | Ruta          | Descripción                                                        |
-|--------|---------------|--------------------------------------------------------------------|
-| POST   | `/api/orders` | Registra un pago y su evento `PaymentAuthorized` en una transacción |
-| GET    | `/api/state`  | Devuelve los tres actores: `orders`, `outbox` y `broker`           |
-| POST   | `/api/chaos`  | Tira (`{"down":true}`) o levanta (`{"down":false}`) el broker      |
+| Método | Ruta            | Descripción                                                         |
+|--------|-----------------|---------------------------------------------------------------------|
+| POST   | `/api/payments` | Registra un pago y su evento `PaymentAuthorized` en una transacción |
+| GET    | `/api/state`    | Devuelve los tres actores: `payments`, `outbox` y `broker`          |
+| POST   | `/api/chaos`    | Tira (`{"down":true}`) o levanta (`{"down":false}`) el broker       |
 
 ### Ejemplos
 
 ```bash
 # Crear un pago
-curl -X POST localhost:8080/api/orders \
+curl -X POST localhost:8080/api/payments \
   -H 'Content-Type: application/json' \
   -d '{"customer":"alice","amount":99.90,"currency":"USD"}'
 
-# Ver el estado (orders, outbox, broker)
+# Ver el estado (payments, outbox, broker)
 curl localhost:8080/api/state
 
 # Modo caos: tirar el broker
 curl -X POST localhost:8080/api/chaos -H 'Content-Type: application/json' -d '{"down":true}'
 ```
 
-`POST /api/orders` acepta `{customer, amount, currency?}` (`currency` por
+`POST /api/payments` acepta `{customer, amount, currency?}` (`currency` por
 defecto `USD`; `amount` debe ser `> 0`).
 
 ## Demo del modo caos

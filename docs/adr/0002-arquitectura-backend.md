@@ -25,9 +25,9 @@ simular la caída del broker para evidenciar la garantía *at-least-once*.
 `internal/{domain,store,broker,relay,api}` + `cmd/server`. El acceso a datos
 vive solo en `store`; `api` no habla con la base directamente.
 
-### Escritor transaccional (`store.CreateOrder`)
+### Escritor transaccional (`store.CreatePayment`)
 
-`tx.Begin` → `INSERT orders` → `INSERT outbox` (payload `PaymentAuthorized`) →
+`tx.Begin` → `INSERT payments` → `INSERT outbox` (payload `PaymentAuthorized`) →
 `tx.Commit`. O se persisten ambas filas o ninguna: es la garantía central del
 patrón. `defer tx.Rollback` cubre cualquier salida temprana (no-op tras commit).
 
@@ -53,8 +53,8 @@ Esto da entrega *at-least-once*: por eso los consumidores deben ser idempotentes
 
 ### API HTTP (`api`)
 
-- `POST /api/orders`: escritor transaccional.
-- `GET /api/state`: expone los tres actores (orders, outbox, broker) en una
+- `POST /api/payments`: escritor transaccional.
+- `GET /api/state`: expone los tres actores (payments, outbox, broker) en una
   sola respuesta, para visualizar el invariante.
 - `POST /api/chaos`: alterna el flag de caída del broker.
 - CORS abierto (`*`) para el frontend Angular en desarrollo.
@@ -68,7 +68,7 @@ vía `signal.NotifyContext` y `srv.Shutdown`.
 ## Consecuencias
 
 - La atomicidad pago+evento queda garantizada por transacción SQL (ADR 0001) y
-  ejercida por `CreateOrder`.
+  ejercida por `CreatePayment`.
 - El broker falso permite el modo caos sin infraestructura externa, pero **no**
   es persistente: los eventos recibidos se pierden al reiniciar el backend (la
   outbox en PostgreSQL sí persiste).

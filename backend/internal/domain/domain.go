@@ -1,5 +1,5 @@
 // Package domain contains the shared types of the outbox demo: the business
-// entity (Order), the event that travels through the outbox (Event) and the
+// entity (Payment), the event that travels through the outbox (Event) and the
 // outbox row as stored in the database (OutboxRow).
 package domain
 
@@ -8,11 +8,11 @@ import (
 	"time"
 )
 
-// EventPaymentAuthorized is the event type emitted when an order is created.
+// EventPaymentAuthorized is the event type emitted when a payment is registered.
 const EventPaymentAuthorized = "PaymentAuthorized"
 
-// Order is the business state: a registered payment/order.
-type Order struct {
+// Payment is the business state: a registered payment.
+type Payment struct {
 	ID        string    `json:"id"`
 	Customer  string    `json:"customer"`
 	Amount    float64   `json:"amount"`
@@ -23,10 +23,10 @@ type Order struct {
 
 // Event is the payload stored in the outbox and delivered to the broker.
 type Event struct {
-	Type     string  `json:"type"`
-	OrderID  string  `json:"order_id"`
-	Amount   float64 `json:"amount"`
-	Currency string  `json:"currency"`
+	Type      string  `json:"type"`
+	PaymentID string  `json:"payment_id"`
+	Amount    float64 `json:"amount"`
+	Currency  string  `json:"currency"`
 }
 
 // OutboxRow mirrors a row of the outbox table.
