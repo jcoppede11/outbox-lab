@@ -21,10 +21,7 @@ import { BrokerState, OutboxRow, Payment } from './models';
     >
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Invariante</p>
-          <p class="text-lg font-semibold text-slate-800">
-            Todo pago registrado acaba notificado
-          </p>
+          <p class="text-lg font-semibold text-slate-800">Todo pago registrado acaba notificado</p>
         </div>
         <div class="flex items-center gap-6">
           <div class="text-center">
@@ -32,7 +29,7 @@ import { BrokerState, OutboxRow, Payment } from './models';
             <p class="text-xs text-slate-500">notificados / registrados</p>
           </div>
           <div
-            class="rounded-full px-3 py-1 text-sm font-semibold"
+            class="rounded-full px-3 py-2 text-sm font-semibold"
             [class]="
               balanced()
                 ? 'bg-emerald-200 text-emerald-800'
@@ -40,9 +37,9 @@ import { BrokerState, OutboxRow, Payment } from './models';
             "
           >
             @if (balanced()) {
-              ✓ en equilibrio
+              ✓ Consistente
             } @else {
-              ⏳ {{ inFlight() }} en tránsito
+              ⏳ {{ inFlight() }} {{ inFlightLabel() }}
             }
           </div>
         </div>
@@ -65,6 +62,10 @@ export class InvariantCounter {
   /** Eventos aún no enviados (pendientes o fallidos): en tránsito, no perdidos. */
   protected readonly inFlight = computed(
     () => this.outbox().filter((r) => r.status !== 'sent').length,
+  );
+
+  protected readonly inFlightLabel = computed(() =>
+    this.inFlight() === 1 ? 'pendiente' : 'pendientes',
   );
 
   protected readonly balanced = computed(

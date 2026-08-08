@@ -13,6 +13,7 @@ que ningún evento se pierde: quedan pendientes y se drenan solos al reactivarlo
 
 - Docker + Docker Compose
 - Go 1.26+ (solo para el flujo de desarrollo con `go run`)
+- Node + **pnpm** (solo para el frontend; su uso está forzado vía `only-allow`)
 
 ## Estructura
 
@@ -108,6 +109,20 @@ defecto `USD`; `amount` debe ser `> 0`).
 | `RELAY_INTERVAL` | `1s`                                                                  | Período del ticker del relay    |
 | `RELAY_BATCH`    | `50`                                                                  | Máximo de eventos por tick      |
 
+Ninguna es obligatoria: `docker compose up` ya las setea. Plantilla para el flujo
+`go run` en [`backend/.env.example`](backend/.env.example).
+
+> ⚠️ **Credenciales de demo.** El usuario y la password `outbox`/`outbox` (en
+> `docker-compose.yml` y `DATABASE_URL`) son **solo para desarrollo local**. No las
+> reutilices en producción: usá una password fuerte inyectada por un gestor de
+> secretos.
+
+> Nota: el Postgres de Docker se publica en el host en el puerto **5433** (el 5432
+> lo ocupa el Postgres nativo). Para correr el backend local con `go run` contra la
+> DB de Docker, apuntá `DATABASE_URL` a `localhost:5433`. Ver
+> [`docs/entorno-docker.md`](docs/entorno-docker.md).
+
 ## Documentación
 
-Decisiones de arquitectura: [`docs/adr/`](docs/adr/).
+- Decisiones de arquitectura: [`docs/adr/`](docs/adr/).
+- Entorno Docker (puertos, red interna y contenedor de migraciones): [`docs/entorno-docker.md`](docs/entorno-docker.md).

@@ -9,14 +9,14 @@ import { Payment } from './models';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DecimalPipe],
   template: `
-    <section class="flex h-full flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section class="flex h-full min-h-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
       <header class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
         <h2 class="font-semibold text-slate-800">💳 Pagos</h2>
         <span class="rounded-full bg-slate-100 px-2 py-0.5 text-sm text-slate-600">
           {{ payments().length }}
         </span>
       </header>
-      <div class="flex-1 overflow-auto">
+      <div class="min-h-0 flex-1 overflow-auto">
         @if (payments().length === 0) {
           <p class="p-4 text-sm text-slate-400">Aún no hay pagos.</p>
         } @else {

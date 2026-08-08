@@ -6,7 +6,9 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "preinstall": "npx only-allow pnpm",
+    "clean": "bash scripts/clean.sh"
   },
   "private": true,
   "packageManager": "pnpm@11.5.2",

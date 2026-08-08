@@ -6,10 +6,10 @@ import { Subject, catchError, merge, of, switchMap, tap, timer } from 'rxjs';
 import { AppState, CreatePaymentRequest } from './models';
 
 /** Período del polling de /api/state, en milisegundos. */
-const POLL_MS = 1000;
+const POLL_MS = 3000;
 
 /**
- * Estado central de la demo. Hace polling de GET /api/state cada segundo para
+ * Estado central de la demo. Hace polling de GET /api/state cada 3 segundos para
  * ver los eventos "viajar" de la outbox al broker en tiempo real, y expone
  * acciones (crear pago, modo caos) que refrescan el estado inmediatamente.
  *

@@ -9,7 +9,7 @@ import { BrokerState } from './models';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DecimalPipe],
   template: `
-    <section class="flex h-full flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section class="flex h-full min-h-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
       <header class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
         <h2 class="font-semibold text-slate-800">📨 Broker</h2>
         @if (broker(); as b) {
@@ -21,7 +21,7 @@ import { BrokerState } from './models';
           </span>
         }
       </header>
-      <div class="flex-1 overflow-auto">
+      <div class="min-h-0 flex-1 overflow-auto">
         @if (broker(); as b) {
           <p class="border-b border-slate-100 px-4 py-2 text-sm text-slate-600">
             Recibidos: <span class="font-semibold text-slate-900">{{ b.received_count }}</span>
