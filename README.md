@@ -3,48 +3,55 @@
 Laboratorio para demostrar el patrón **Transactional Outbox** en pagos: cómo
 registrar un pago y publicar su evento sin caer en el problema del *dual write*.
 
+**Dual write:** escribir en la base de datos y en el broker como dos pasos
+separados, sin transacción compartida. Si uno falla y el otro no, quedás
+inconsistente (pago sin evento, o evento sin pago). El outbox evita eso
+guardando el evento en la misma transacción SQL que el pago; el relay publica
+después, de forma asíncrona y reintentable.
+
 Tres actores visibles: la tabla `payments` (estado de negocio), la tabla `outbox`
 (eventos `pending`/`sent`/`failed`) y un **broker falso in-process** (lo que
 facturación/notificaciones realmente reciben). Un **relay** en segundo plano
 drena la outbox hacia el broker. El **modo caos** permite tirar el broker y ver
 que ningún evento se pierde: quedan pendientes y se drenan solos al reactivarlo.
 
+## Quick start
+
+```bash
+git clone <URL-del-repo>
+cd outbox-lab
+docker compose up -d --build
+```
+
+Abrí **http://localhost:4200** o el puerto que seteaste y probá el patrón:
+
+1. **Activá el modo caos** (tirá el broker).
+2. **Creá un pago** → su evento queda en la outbox como `pending` (no se pierde).
+3. **Desactivá el caos** → el relay drena el evento y pasa a `sent`.
+
+Para correr en otro puerto: `FRONTEND_PORT=4300 docker compose up -d --build`.
+Para parar todo: `docker compose down` (agregá `-v` para resetear la base).
+
 ## Requisitos
 
-- Docker + Docker Compose
+- Docker
 - Go 1.26+ (solo para el flujo de desarrollo con `go run`)
 - Node + **pnpm** (solo para el frontend; su uso está forzado vía `only-allow`)
 
-## Estructura
-
-```
-backend/
-  cmd/server/          main: wiring de pool, broker, relay y HTTP server
-  internal/
-    domain/            tipos compartidos (Payment, Event, OutboxRow)
-    store/             acceso a datos: escritor transaccional + drenado
-    broker/            broker falso in-process con flag de caída
-    relay/             goroutine con time.Ticker que publica pendientes
-    api/               handlers HTTP + CORS
-  migrations/          migraciones golang-migrate (payments + outbox)
-  Dockerfile           build multi-stage (distroless)
-docs/adr/              decisiones de arquitectura
-docker-compose.yml     postgres + migrate (one-shot) + backend
-```
-
 ## Cómo correrlo
 
-### Opción A — todo con Docker
+### Opción A — todo con Docker (incluido el dashboard)
 
-Levanta PostgreSQL, aplica las migraciones y arranca el backend, en orden:
+Levanta PostgreSQL, aplica las migraciones, arranca el backend y sirve el
+dashboard, en orden:
 
 ```bash
-docker compose up -d
-curl localhost:8080/api/state
+docker compose up -d --build
 ```
 
-El arranque respeta las dependencias: `postgres` (healthy) → `migrate`
-(corre y termina) → `backend`.
+Luego abrí **http://localhost:4200** para ver el dashboard: crear pagos,
+activar el modo caos y observar cómo la outbox se llena de `pending` y se drena
+sola al reactivar el broker. Nada de instalaciones aquí.
 
 ### Opción B — backend en desarrollo con `go run`
 
@@ -102,9 +109,9 @@ defecto `USD`; `amount` debe ser `> 0`).
 
 ## Variables de entorno (backend)
 
-| Variable         | Default                                                              | Descripción                     |
-|------------------|----------------------------------------------------------------------|---------------------------------|
-| `DATABASE_URL`   | `postgres://outbox:outbox@localhost:5432/outbox_lab?sslmode=disable` | Conexión a PostgreSQL           |
+| Variable         | Default                                                               | Descripción                     |
+|------------------|---------------------------------------------------------------------- |---------------------------------|
+| `DATABASE_URL`   | `postgres://outbox:outbox@localhost:5432/outbox_lab?sslmode=disable`  | Conexión a PostgreSQL           |
 | `HTTP_ADDR`      | `:8080`                                                               | Dirección de escucha del server |
 | `RELAY_INTERVAL` | `1s`                                                                  | Período del ticker del relay    |
 | `RELAY_BATCH`    | `50`                                                                  | Máximo de eventos por tick      |
@@ -125,4 +132,3 @@ Ninguna es obligatoria: `docker compose up` ya las setea. Plantilla para el fluj
 ## Documentación
 
 - Decisiones de arquitectura: [`docs/adr/`](docs/adr/).
-- Entorno Docker (puertos, red interna y contenedor de migraciones): [`docs/entorno-docker.md`](docs/entorno-docker.md).
