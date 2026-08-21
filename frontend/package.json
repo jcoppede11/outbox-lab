@@ -1,6 +1,8 @@
 {
   "name": "frontend",
   "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.5.2",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -10,8 +12,6 @@
     "preinstall": "npx only-allow pnpm",
     "clean": "bash scripts/clean.sh"
   },
-  "private": true,
-  "packageManager": "pnpm@11.5.2",
   "dependencies": {
     "@angular/common": "^21.2.0",
     "@angular/compiler": "^21.2.0",
