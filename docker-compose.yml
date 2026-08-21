@@ -1,4 +1,6 @@
 services:
+  # Base de datos PostgreSQL.
+  # Solo loopback: la DB no queda expuesta a la red.
   postgres:
     image: postgres:17-alpine
     container_name: outbox-lab-postgres
@@ -7,7 +9,7 @@ services:
       POSTGRES_PASSWORD: outbox
       POSTGRES_DB: outbox_lab
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -18,7 +20,7 @@ services:
 
   # Servicio one-shot: aplica las migraciones y termina.
   # Corre en `docker compose up` (antes del backend) y también a mano:
-  #   docker compose run --rm migrate
+  # docker compose run --rm migrate
   migrate:
     image: migrate/migrate:v4.18.1
     depends_on:
@@ -32,9 +34,11 @@ services:
       - "-database=postgres://outbox:outbox@postgres:5432/outbox_lab?sslmode=disable"
       - "up"
 
+  # API Go del patrón outbox: arranca tras migrate y expone :8080.
   backend:
     build:
       context: ./backend
+    image: outbox-lab-backend:local
     container_name: outbox-lab-backend
     depends_on:
       postgres:
@@ -47,7 +51,20 @@ services:
       RELAY_INTERVAL: 1s
       RELAY_BATCH: "50"
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+
+  # Frontend Angular servido por nginx, haciendo reverse-proxy de /api hacia el
+  # backend (mismo origen, sin CORS). Es la forma visual de ver el patrón.
+  frontend:
+    build:
+      context: ./frontend
+    image: outbox-lab-frontend:local
+    container_name: outbox-lab-frontend
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-4200}:80"
     restart: unless-stopped
 
 volumes:
