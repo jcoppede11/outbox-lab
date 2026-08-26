@@ -75,3 +75,22 @@ vía `signal.NotifyContext` y `srv.Shutdown`.
 - `FOR UPDATE SKIP LOCKED` deja la puerta abierta a escalar a varios relays.
 - El polling por ticker introduce una latencia acotada por `RELAY_INTERVAL`
   (aceptable para la demo; una versión productiva podría usar `LISTEN/NOTIFY`).
+
+## Límites conocidos (deuda consciente)
+
+Estos recortes son deliberados para mantener la demo enfocada en el patrón; se
+documentan para no confundirlos con descuidos:
+
+- **Representación del dinero.** En la base `amount` es `NUMERIC(12,2)`, pero el
+  backend lo mapea a `float64` en Go y JSON. Para la demo alcanza; en un sistema
+  real de pagos el float acarrea errores de redondeo, así que correspondería
+  usar enteros en la unidad mínima (centavos) o un tipo decimal
+  (p. ej. `shopspring/decimal`).
+- **Poison messages y head-of-line blocking.** Si `publish` falla siempre para
+  un evento, el relay corta el lote y ese evento bloquea la cabeza de la cola
+  (los `ORDER BY id`). El esquema reserva el estado `failed` para una futura
+  cola de descartados (dead-letter) con tope de reintentos, pero la demo aún no
+  la implementa.
+- **Entrega at-least-once.** El consumidor puede recibir el mismo evento más de
+  una vez (p. ej. si el proceso muere entre `publish` y `UPDATE ... sent`), por
+  lo que los consumidores reales deben ser **idempotentes**.
