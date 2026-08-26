@@ -1,0 +1,17 @@
+# Variables de entorno locales (usar backend/.env.example como plantilla)
+.env
+*.env
+!*.env.example
+
+# Artefactos de compilación de Go
+/backend/bin/
+/backend/server
+*.exe
+
+# Cobertura de tests
+*.out
+coverage.*
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
