@@ -1,0 +1,13 @@
+version: "2"
+
+linters:
+  # Conjunto por defecto de golangci-lint (errcheck, govet, ineffassign,
+  # staticcheck, unused), más algunos extras de bajo ruido.
+  enable:
+    - misspell
+  settings:
+    errcheck:
+      # Ignorar el error del rollback diferido es idiomático: es un no-op tras
+      # el commit y no hay acción de recuperación posible al desenrollar el defer.
+      exclude-functions:
+        - (github.com/jackc/pgx/v5.Tx).Rollback

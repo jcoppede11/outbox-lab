@@ -1,0 +1,9 @@
+# Normaliza los fin de línea: LF en el repo para todo el texto.
+# Evita que un checkout en Windows (CRLF) rompa gofmt, golangci-lint o los scripts.
+* text=auto eol=lf
+
+# Binarios: nunca tocar.
+*.png binary
+*.jpg binary
+*.ico binary
+*.pdf binary
